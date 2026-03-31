@@ -1,0 +1,45 @@
+version: '3'
+
+services:
+
+  zookeeper:
+    image: wurstmeister/zookeeper
+    ports:
+      - "2181:2181"
+
+  kafka:
+    image: wurstmeister/kafka
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_HOST_NAME: kafka
+      KAFKA_ADVERTISED_PORT: 9092
+    depends_on:
+      - zookeeper
+
+  mongo:
+    image: mongo
+    ports:
+      - "27017:27017"
+
+  producer:
+    build: .
+    command: python producer.py
+    depends_on:
+      - kafka
+
+  spark:
+    build: .
+    command: spark-submit --packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.1 spark_job.py
+    depends_on:
+      - kafka
+      - mongo
+
+  streamlit:
+    build: .
+    command: streamlit run app.py --server.address 0.0.0.0
+    ports:
+      - "8501:8501"
+    depends_on:
+      - mongo
